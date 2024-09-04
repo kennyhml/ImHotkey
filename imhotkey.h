@@ -9,10 +9,11 @@ using ImHotkeyFlags = int;
 enum ImHotkeyFlags_
 {
     ImHotkeyFlags_None = 0,
-    ImHotkeyFlags_NoKeyboard = 1,
-    ImHotkeyFlags_NoMouse = 1 << 1,
+    ImHotkeyFlags_NoModifiers = 1,     // Ignore modifiers Mods (shift, alt, ctrl..)
+    ImHotkeyFlags_NoKeyboard = 1 << 1, // Ignore keyboard inputs (modifiers not included)
+    ImHotkeyFlags_NoMouse = 1 << 2,    // Ignore Mouse inputs, including side buttons
 
-    ImHotkeyFlags_Default = ImHotkeyFlags_None
+    ImHotkeyFlags_Default = ImHotkeyFlags_None // Default flags to use
 };
 
 namespace ImGui
