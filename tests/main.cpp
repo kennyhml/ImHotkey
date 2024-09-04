@@ -8,6 +8,8 @@
 #include <d3d9.h>
 #include <iostream>
 
+#include "../imhotkey.h"
+
 LPDIRECT3D9 g_pD3D = NULL;
 LPDIRECT3DDEVICE9 g_pd3dDevice = NULL;
 D3DPRESENT_PARAMETERS g_d3dpp = {};
@@ -135,7 +137,8 @@ int WINAPI WinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev_instance,
 
         ImGui::Begin("Test Window", NULL, ImGuiWindowFlags_NoResize);
         ImGui::SetWindowSize(ImVec2(200, 100));
-        ImGui::Text("This is an empty window.");
+        static ImGui::ImHotkeyData_t data{};
+        ImGui::ImHotkey("##test", &data);
         ImGui::End();
 
         ImGui::EndFrame();
