@@ -28,19 +28,22 @@ namespace ImGui
     struct ImHotkeyData_t
     {
     public:
+        ImHotkeyData_t(unsigned short t_scanCode, unsigned short t_vkCode,
+                       unsigned short t_mouseButtons = 0, unsigned short t_modifiers = 0);
+
         // The scan code of the key, scan codes are keyboard hardware dependent
         unsigned short scanCode = 0;
 
-        // The virtual keycode of the the key, these are constants.
+        // The virtual keycode of the the key, constant and set based on the scancode
         unsigned short vkCode = 0;
 
-        // Either left, right, middle, mouse4 or mouse5 (0 - 5)
+        // Either none, left, right, middle, mouse4 or mouse5 (0 - 5)
         unsigned short mouseButton = 0;
 
-        // Either shift, ctrl or alt (0x1, 0x10 or 0x100)
+        // Either none, shift, ctrl or alt (0x1, 0x10 or 0x100)
         unsigned short modifiers = 0;
 
-        [[nodiscard]] const char* getLabel();
+        [[nodiscard]] const char* GetLabel();
 
     private:
         // The label of the widget is made up from the buttons and modifiers, for example
@@ -49,7 +52,7 @@ namespace ImGui
 
         // The sum of all fields together to determine whether the values have changed
         // since the last time the label has been converted to a string representation
-        int32_t label_cache_sum = 0;
+        int32_t labelCacheSum = 0;
     };
 
     IMGUI_API bool ImHotkey(ImHotkeyData_t* v);
