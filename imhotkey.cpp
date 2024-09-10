@@ -11,6 +11,17 @@ namespace ImGui
 {
     namespace
     {
+        // Hold the widget data that is currently being captured in a shared pointer, that
+        // way we can ensure the container wont get deleted while the capturing threads
+        // are still running and accessing it. Weak pointers would expose us to racing
+        ImHotkeyData_t* capturing = nullptr;
+
+        // Default size of an ImHotkey widget
+        constexpr ImVec2 DEFAULT_SIZE(60, 30);
+
+        HHOOK gMouseHook = nullptr;
+        HHOOK gKeyboardHook = nullptr;
+
         std::map<std::string, unsigned short> modNameToFlag{
             {"Shift", ImHotkeyModifier_Shift}, {"Alt", ImHotkeyModifier_Alt},
             {"Ctrl", ImHotkeyModifier_Ctrl},
@@ -19,29 +30,43 @@ namespace ImGui
         std::array<std::string, 5> mouseNames
                 {"Mouse Left", "Mouse Right", "Mouse Middle", "Mouse4", "Mouse5"};
 
-        const char* capturing_label = nullptr;
+        LRESULT CALLBACK KeyboardEventProc(const int nCode, const WPARAM wParam,
+                                           const LPARAM lParam)
+        {
+            return CallNextHookEx(gKeyboardHook, nCode, wParam, lParam);
+        }
 
-        constexpr ImVec2 DEFAULT_SIZE(60, 30);
+        LRESULT CALLBACK MouseEventProc(const int nCode, const WPARAM wParam,
+                                        const LPARAM lParam)
+        {
+            if (wParam == WM_LBUTTONDOWN) {
+                capturing->mouseButton = 1;
+            } else if (wParam == WM_RBUTTONDOWN) {
+                capturing->mouseButton = 2;
+            } else if (wParam == WM_MBUTTONDOWN) {
+                capturing->mouseButton = 3;
+            } else if (wParam == WM_XBUTTONDOWN) {
+                const MSLLHOOKSTRUCT* event = reinterpret_cast<MSLLHOOKSTRUCT*>(lParam);
+                capturing->mouseButton = event->mouseData == 65536 ? 4 : 5;
+            }
 
-        HHOOK gMouseHook = nullptr;
-        HHOOK gKeyboardHook = nullptr;
-
-        LRESULT CALLBACK KeyboardEventProc(int nCode, WPARAM wParam, LPARAM lParam);
-
-        LRESULT CALLBACK MouseEventProc(int nCode, WPARAM wParam, LPARAM lParam);
+            return CallNextHookEx(gMouseHook, nCode, wParam, lParam);
+        }
 
         DWORD ApplyEventHook(const int id, const HOOKPROC& eventProc, HHOOK& handle)
         {
             handle = SetWindowsHookExA(id, eventProc, GetModuleHandleA(nullptr), 0);
 
-            MSG message;
-            while (capturing_label != nullptr) {
-                if (PeekMessage(&message, nullptr, 0, 0, PM_REMOVE)) {
-                    TranslateMessage(&message);
-                    DispatchMessage(&message);
+            std::thread([handle] {
+                MSG message;
+                while (capturing) {
+                    if (PeekMessage(&message, nullptr, 0, 0, PM_REMOVE)) {
+                        TranslateMessage(&message);
+                        DispatchMessage(&message);
+                    }
                 }
-            }
-            UnhookWindowsHookEx(handle);
+                UnhookWindowsHookEx(handle);
+            }).detach();
             return 0;
         }
     }
@@ -92,20 +117,25 @@ namespace ImGui
 
     bool ImHotkey(ImHotkeyData_t* v, const ImVec2& size, const ImHotkeyFlags flags)
     {
-        if (capturing_label == nullptr) {
+        if (!capturing) {
             // Start capturing if the button is pressed
             if (Button(v->GetLabel(), size)) {
-                capturing_label = v->GetLabel();
+                capturing = v;
+                if ((flags & ImHotkeyFlags_NoKeyboard) == 0) {
+                    ApplyEventHook(WH_KEYBOARD_LL, KeyboardEventProc, gKeyboardHook);
+                }
+                if ((flags & ImHotkeyFlags_NoMouse) == 0) {
+                    ApplyEventHook(WH_MOUSE_LL, MouseEventProc, gMouseHook);
+                }
             }
             return false;
         }
 
-
-        const bool is_capturing_widget = capturing_label == v->GetLabel();
+        const bool is_active_widget = capturing && v == capturing;
 
         // Disable every hotkey widget while we are capturing
         BeginDisabled(true);
-        Button(is_capturing_widget ? "Listening..." : v->GetLabel(), size);
+        Button(is_active_widget ? "Listening..." : v->GetLabel(), size);
         EndDisabled();
         return false;
     }
