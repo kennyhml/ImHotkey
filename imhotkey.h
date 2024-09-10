@@ -77,7 +77,7 @@ namespace ImGui
 
         // The sum of all fields together to determine whether the values have changed
         // since the last time the label has been converted to a string representation
-        int32_t labelCacheSum_ = 0;
+        int32_t labelCacheSum_ = -1;
 
         static inline int32_t instanceCount = 0;
     };
