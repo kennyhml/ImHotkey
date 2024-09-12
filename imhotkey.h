@@ -67,6 +67,8 @@ namespace ImGui
          */
         [[nodiscard]] const char* GetLabel();
 
+        void Reset();
+
     private:
         // The label of the widget is made up from the buttons and modifiers, for example
         // "Alt + F4" or "Ctrl + Z" or "A". Be mindful of label collisions.

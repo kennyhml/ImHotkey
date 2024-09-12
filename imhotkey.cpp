@@ -16,11 +16,7 @@ namespace ImGui
         HHOOK gMouseHook = nullptr;
         HHOOK gKeyboardHook = nullptr;
 
-        // Flag to check whether, for the current capturing 'session', we have had
-        // input - that way we can stop the capturing after we no longer have any.
-        bool has_had_input = false;
-
-        int32_t input_stack = 0;
+        int32_t inputStack = 0;
 
         std::map<std::string, unsigned short> modNameToFlag{
             {"Shift", ImHotkeyModifier_Shift}, {"Alt", ImHotkeyModifier_Alt},
@@ -33,8 +29,25 @@ namespace ImGui
         LRESULT CALLBACK KeyboardEventProc(const int nCode, const WPARAM wParam,
                                            const LPARAM lParam)
         {
-            has_had_input |= true;
+            const auto event = reinterpret_cast<KBDLLHOOKSTRUCT*>(lParam);
+            static std::map<DWORD, bool> keyStates;
 
+            switch (wParam) {
+                case WM_KEYDOWN:
+                case WM_SYSKEYDOWN:
+                    // key is being held down and is already registered
+                    if (keyStates[event->vkCode]) { break; }
+
+                    inputStack++;
+                    keyStates[event->vkCode] = true;
+                    capturing->vkCode = event->vkCode;
+                    break;
+
+                case WM_KEYUP:
+                case WM_SYSKEYUP:
+                    inputStack--;
+                    keyStates[event->vkCode] = false;
+            }
             return CallNextHookEx(gKeyboardHook, nCode, wParam, lParam);
         }
 
@@ -46,13 +59,13 @@ namespace ImGui
                 case WM_RBUTTONDOWN:
                 case WM_MBUTTONDOWN:
                 case WM_XBUTTONDOWN:
-                    input_stack++;
+                    inputStack++;
                     break;
                 case WM_LBUTTONUP:
                 case WM_RBUTTONUP:
                 case WM_MBUTTONUP:
                 case WM_XBUTTONUP:
-                    input_stack--;
+                    inputStack--;
                 default:
                     break;
             }
@@ -127,6 +140,11 @@ namespace ImGui
         return label_.c_str();
     }
 
+    void ImHotkeyData_t::Reset()
+    {
+        modifiers = vkCode = scanCode = mouseButton = 0;
+    }
+
     bool ImHotkey(ImHotkeyData_t* v)
     {
         return ImHotkey(v, {60, 30}, ImHotkeyFlags_Default);
@@ -134,11 +152,14 @@ namespace ImGui
 
     bool ImHotkey(ImHotkeyData_t* v, const ImVec2& size, const ImHotkeyFlags flags)
     {
+        static bool hadAnyInput = false;
+
         if (!capturing) {
             // Start capturing if the button is pressed
             if (Button(v->GetLabel(), size)) {
                 capturing = v;
-                has_had_input = false;
+                hadAnyInput = false;
+                capturing->Reset();
                 if ((flags & ImHotkeyFlags_NoKeyboard) == 0) {
                     ApplyEventHook(WH_KEYBOARD_LL, KeyboardEventProc, gKeyboardHook);
                 }
@@ -149,12 +170,17 @@ namespace ImGui
             return false;
         }
 
-        const bool is_captured = v == capturing;
+        hadAnyInput |= inputStack > 0;
+        if (hadAnyInput && inputStack <= 0) {
+            capturing = nullptr; // TODO: Not threadsafe atm.
+        }
+
+        const bool isCaptured = v == capturing;
         // Disable every hotkey widget while we are capturing
         BeginDisabled(true);
-        if (is_captured) { PushStyleColor(ImGuiCol_Text, ImVec4{1, 0.5, 0, 1}); }
-        Button(v->GetLabel(), size);
-        if (is_captured) { PopStyleColor(); }
+        if (isCaptured) { PushStyleColor(ImGuiCol_Text, ImVec4{1, 0.5, 0, 1}); }
+        Button(hadAnyInput ? v->GetLabel() : "...", size);
+        if (isCaptured) { PopStyleColor(); }
         EndDisabled();
         return false;
     }
