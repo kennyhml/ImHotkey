@@ -11,34 +11,52 @@ namespace ImGui
 {
     namespace
     {
-        // Hold the widget data that is currently being captured in a shared pointer, that
-        // way we can ensure the container wont get deleted while the capturing threads
-        // are still running and accessing it. Weak pointers would expose us to racing
         ImHotkeyData_t* capturing = nullptr;
-
-        // Default size of an ImHotkey widget
-        constexpr ImVec2 DEFAULT_SIZE(60, 30);
 
         HHOOK gMouseHook = nullptr;
         HHOOK gKeyboardHook = nullptr;
+
+        // Flag to check whether, for the current capturing 'session', we have had
+        // input - that way we can stop the capturing after we no longer have any.
+        bool has_had_input = false;
+
+        int32_t input_stack = 0;
 
         std::map<std::string, unsigned short> modNameToFlag{
             {"Shift", ImHotkeyModifier_Shift}, {"Alt", ImHotkeyModifier_Alt},
             {"Ctrl", ImHotkeyModifier_Ctrl},
         };
 
-        std::array<std::string, 5> mouseNames
-                {"Mouse Left", "Mouse Right", "Mouse Middle", "Mouse4", "Mouse5"};
+        std::array<std::string, 6> mouseNames
+                {"", "Left", "Right", "Middle", "Mouse4", "Mouse5"};
 
         LRESULT CALLBACK KeyboardEventProc(const int nCode, const WPARAM wParam,
                                            const LPARAM lParam)
         {
+            has_had_input |= true;
+
             return CallNextHookEx(gKeyboardHook, nCode, wParam, lParam);
         }
 
         LRESULT CALLBACK MouseEventProc(const int nCode, const WPARAM wParam,
                                         const LPARAM lParam)
         {
+            switch (wParam) {
+                case WM_LBUTTONDOWN:
+                case WM_RBUTTONDOWN:
+                case WM_MBUTTONDOWN:
+                case WM_XBUTTONDOWN:
+                    input_stack++;
+                    break;
+                case WM_LBUTTONUP:
+                case WM_RBUTTONUP:
+                case WM_MBUTTONUP:
+                case WM_XBUTTONUP:
+                    input_stack--;
+                default:
+                    break;
+            }
+
             if (wParam == WM_LBUTTONDOWN) {
                 capturing->mouseButton = 1;
             } else if (wParam == WM_RBUTTONDOWN) {
@@ -49,7 +67,6 @@ namespace ImGui
                 const MSLLHOOKSTRUCT* event = reinterpret_cast<MSLLHOOKSTRUCT*>(lParam);
                 capturing->mouseButton = event->mouseData == 65536 ? 4 : 5;
             }
-
             return CallNextHookEx(gMouseHook, nCode, wParam, lParam);
         }
 
@@ -112,7 +129,7 @@ namespace ImGui
 
     bool ImHotkey(ImHotkeyData_t* v)
     {
-        return ImHotkey(v, DEFAULT_SIZE, ImHotkeyFlags_Default);
+        return ImHotkey(v, {60, 30}, ImHotkeyFlags_Default);
     }
 
     bool ImHotkey(ImHotkeyData_t* v, const ImVec2& size, const ImHotkeyFlags flags)
@@ -121,6 +138,7 @@ namespace ImGui
             // Start capturing if the button is pressed
             if (Button(v->GetLabel(), size)) {
                 capturing = v;
+                has_had_input = false;
                 if ((flags & ImHotkeyFlags_NoKeyboard) == 0) {
                     ApplyEventHook(WH_KEYBOARD_LL, KeyboardEventProc, gKeyboardHook);
                 }
@@ -131,11 +149,12 @@ namespace ImGui
             return false;
         }
 
-        const bool is_active_widget = capturing && v == capturing;
-
+        const bool is_captured = v == capturing;
         // Disable every hotkey widget while we are capturing
         BeginDisabled(true);
-        Button(is_active_widget ? "Listening..." : v->GetLabel(), size);
+        if (is_captured) { PushStyleColor(ImGuiCol_Text, ImVec4{1, 0.5, 0, 1}); }
+        Button(v->GetLabel(), size);
+        if (is_captured) { PopStyleColor(); }
         EndDisabled();
         return false;
     }
