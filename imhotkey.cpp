@@ -34,19 +34,30 @@ namespace ImGui
 
             switch (wParam) {
                 case WM_KEYDOWN:
-                case WM_SYSKEYDOWN:
+                case WM_SYSKEYDOWN: {
                     // key is being held down and is already registered
                     if (keyStates[event->vkCode]) { break; }
 
                     inputStack++;
                     keyStates[event->vkCode] = true;
-                    capturing->vkCode = event->vkCode;
-                    break;
 
+                    if (event->vkCode == VK_LCONTROL || event->vkCode == VK_RCONTROL) {
+                        capturing->modifiers |= ImHotkeyModifier_Ctrl;
+                    } else if (event->vkCode == VK_LSHIFT || event->vkCode == VK_RSHIFT) {
+                        capturing->modifiers |= ImHotkeyModifier_Shift;
+                    } else if (event->vkCode == VK_LMENU || event->vkCode == VK_RMENU) {
+                        capturing->modifiers |= ImHotkeyModifier_Alt;
+                    } else {
+                        capturing->vkCode = event->vkCode;
+                    }
+                    break;
+                }
                 case WM_KEYUP:
                 case WM_SYSKEYUP:
                     inputStack--;
                     keyStates[event->vkCode] = false;
+                default:
+                    break;
             }
             return CallNextHookEx(gKeyboardHook, nCode, wParam, lParam);
         }
@@ -147,7 +158,7 @@ namespace ImGui
 
     bool ImHotkey(ImHotkeyData_t* v)
     {
-        return ImHotkey(v, {60, 30}, ImHotkeyFlags_Default);
+        return ImHotkey(v, {100, 30}, ImHotkeyFlags_Default);
     }
 
     bool ImHotkey(ImHotkeyData_t* v, const ImVec2& size, const ImHotkeyFlags flags)
