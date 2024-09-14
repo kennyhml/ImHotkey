@@ -12,6 +12,7 @@ namespace ImGui
     namespace
     {
         ImHotkeyData_t* capturing = nullptr;
+        ImHotkeyFlags currentFlags = ImHotkeyFlags_None;
 
         HHOOK gMouseHook = nullptr;
         HHOOK gKeyboardHook = nullptr;
@@ -42,13 +43,21 @@ namespace ImGui
                     keyStates[event->vkCode] = true;
 
                     if (event->vkCode == VK_LCONTROL || event->vkCode == VK_RCONTROL) {
-                        capturing->modifiers |= ImHotkeyModifier_Ctrl;
+                        if (!(currentFlags & ImHotkeyFlags_NoModifiers)) {
+                            capturing->modifiers |= ImHotkeyModifier_Ctrl;
+                        }
                     } else if (event->vkCode == VK_LSHIFT || event->vkCode == VK_RSHIFT) {
-                        capturing->modifiers |= ImHotkeyModifier_Shift;
+                        if (!(currentFlags & ImHotkeyFlags_NoModifiers)) {
+                            capturing->modifiers |= ImHotkeyModifier_Shift;
+                        }
                     } else if (event->vkCode == VK_LMENU || event->vkCode == VK_RMENU) {
-                        capturing->modifiers |= ImHotkeyModifier_Alt;
+                        if (!(currentFlags & ImHotkeyFlags_NoModifiers)) {
+                            capturing->modifiers |= ImHotkeyModifier_Alt;
+                        }
                     } else {
-                        capturing->vkCode = event->vkCode;
+                        if (!(currentFlags & ImHotkeyFlags_NoKeyboard)) {
+                            capturing->vkCode = event->vkCode;
+                        }
                     }
                     break;
                 }
@@ -161,19 +170,31 @@ namespace ImGui
         return ImHotkey(v, {100, 30}, ImHotkeyFlags_Default);
     }
 
+    bool ImHotkey(ImHotkeyData_t* v, const ImHotkeyFlags flags)
+    {
+        return ImHotkey(v, {100, 30}, flags);
+    }
+
     bool ImHotkey(ImHotkeyData_t* v, const ImVec2& size, const ImHotkeyFlags flags)
     {
         static bool hadAnyInput = false;
 
+        // What are we supposed to be capturing if any type of input is disabled..?
+        assert(!(flags & ImHotkeyFlags_NoKeyboard)
+            || !(flags & ImHotkeyFlags_NoMouse)
+            || !(flags & ImHotkeyFlags_NoModifiers));
+
         if (!capturing) {
             if (Button(v->GetLabel(), size)) {
                 capturing = v;
+                currentFlags = flags;
                 hadAnyInput = false;
                 capturing->Reset();
-                if ((flags & ImHotkeyFlags_NoKeyboard) == 0) {
+                if (!(flags & ImHotkeyFlags_NoKeyboard) || !(
+                        flags & ImHotkeyFlags_NoModifiers)) {
                     ApplyEventHook(WH_KEYBOARD_LL, KeyboardEventProc, gKeyboardHook);
                 }
-                if ((flags & ImHotkeyFlags_NoMouse) == 0) {
+                if (!(flags & ImHotkeyFlags_NoMouse)) {
                     ApplyEventHook(WH_MOUSE_LL, MouseEventProc, gMouseHook);
                 }
                 // We reset the keybind so indicate the change

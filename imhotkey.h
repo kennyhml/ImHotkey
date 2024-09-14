@@ -1,9 +1,7 @@
 #pragma once
-#include <cstdint>
-#include <map>
-#include <string>
-
 #include "imgui.h"
+
+#include <string>
 
 using ImHotkeyFlags = int;
 
@@ -13,10 +11,9 @@ using ImHotkeyFlags = int;
 enum ImHotkeyFlags_
 {
     ImHotkeyFlags_None = 0,
-    ImHotkeyFlags_NoModifiers = 1,      // Ignore modifiers keys (shift, alt, ctrl..)
-    ImHotkeyFlags_NoKeyboard = 1 << 1,  // Ignore the keyboard (modifiers not included)
-    ImHotkeyFlags_NoMouse = 1 << 2,     // Ignore the mouse (including side buttons)
-    ImHotkeyFlags_OneModifier = 1 << 3, // Allow a maximum of one modifier key
+    ImHotkeyFlags_NoModifiers = 1,     // Ignore modifiers keys (shift, alt, ctrl..)
+    ImHotkeyFlags_NoKeyboard = 1 << 1, // Ignore the keyboard (modifiers not included)
+    ImHotkeyFlags_NoMouse = 1 << 2,    // Ignore the mouse (including side buttons)
 
     ImHotkeyFlags_Default = ImHotkeyFlags_None // Default flags to use
 };
@@ -53,7 +50,7 @@ namespace ImGui
         // Either none, left, right, middle, mouse4 or mouse5 (0 - 5)
         unsigned short mouseButton = 0;
 
-        // Either none, shift, ctrl or alt (0x, 0x1, 0x10 or 0x100)
+        // Could be shift, ctrl or alt (0x1, 0x10 or 0x100)
         unsigned short modifiers = 0;
 
         /**
@@ -67,6 +64,9 @@ namespace ImGui
          */
         [[nodiscard]] const char* GetLabel();
 
+        /**
+         * @brief Resets the keybind (sets all values back to 0).
+         */
         void Reset();
 
     private:
@@ -85,6 +85,8 @@ namespace ImGui
     };
 
     IMGUI_API bool ImHotkey(ImHotkeyData_t* v);
+
+    IMGUI_API bool ImHotkey(ImHotkeyData_t* v, ImHotkeyFlags flags);
 
     IMGUI_API bool ImHotkey(ImHotkeyData_t* v, const ImVec2& size);
 
