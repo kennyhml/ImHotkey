@@ -20,3 +20,8 @@ To display the hotkey text on the button, each `ImHotkeyData_t` creates a unique
 `{key combination}##{id}` which allows things to share the same hotkeys without the widgets unintentionally using the same label.
 
 The capture is automatically ended when no key or mouse button is being held down anymore. The color of the text visually indicates whether a capture is ongoing.
+
+## Features
+- Capture mouse buttons (left, right, middle, mouse4, mouse5).
+- Capture keyboard, including modifiers (shift, alt, ctrl), independent of keyboard layout
+- Exclude capture of keyboard / mouse / modifiers through flags.
