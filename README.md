@@ -1,7 +1,7 @@
 # ImHotkey
 Compact ImGui widget to implement hotkey assignment via a widget.
 ## Installation
-Drop `ImHotkey.h` and `ImHotkey.cpp` into the folder containing your ImGui setup. *The project does not ship with those files!*
+Drop `ImHotkey.h` and `ImHotkey.cpp` into the folder containing ImGui setup - *This project does not ship with one!*
 
 **WARNING:** You only want to copy the two files mentioned, the rest of the projects files are purely for testing and development purposes.
 ## The concept
