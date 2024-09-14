@@ -166,7 +166,6 @@ namespace ImGui
         static bool hadAnyInput = false;
 
         if (!capturing) {
-            // Start capturing if the button is pressed
             if (Button(v->GetLabel(), size)) {
                 capturing = v;
                 hadAnyInput = false;
@@ -177,22 +176,27 @@ namespace ImGui
                 if ((flags & ImHotkeyFlags_NoMouse) == 0) {
                     ApplyEventHook(WH_MOUSE_LL, MouseEventProc, gMouseHook);
                 }
+                // We reset the keybind so indicate the change
+                return true;
             }
             return false;
         }
 
+        // No more keys being held should end the capture of the widget
         hadAnyInput |= inputStack > 0;
         if (hadAnyInput && inputStack <= 0) {
-            capturing = nullptr; // TODO: Not threadsafe atm.
+            // TODO: Not threadsafe, could be set to null as input hooks try to access it
+            capturing = nullptr;
         }
 
-        const bool isCaptured = v == capturing;
-        // Disable every hotkey widget while we are capturing
         BeginDisabled(true);
-        if (isCaptured) { PushStyleColor(ImGuiCol_Text, ImVec4{1, 0.5, 0, 1}); }
-        Button(hadAnyInput ? v->GetLabel() : "...", size);
-        if (isCaptured) { PopStyleColor(); }
+        if (v == capturing) {
+            // Change the text to orange to indicate that it is being captured
+            PushStyleColor(ImGuiCol_Text, ImVec4{1, 0.5, 0, 1});
+            Button(hadAnyInput ? v->GetLabel() : "...", size);
+            PopStyleColor();
+        } else { Button(v->GetLabel(), size); }
         EndDisabled();
-        return false;
+        return !capturing;
     }
 }
