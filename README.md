@@ -13,7 +13,7 @@ Only copy the two files mentioned, the rest of the projects files are exclusivel
 The underlying widget is an `ImGui::Button` that can be clicked to start the capture, the hotkey values are stored in a custom container `ImHotkeyData_t`.
 Communication between your interface and the API is your responsibility to implement and should be rather straightfoward. 
 
-To capture the inputs, the extension spins up threads whch hook into low-level keyboard (`WH_KEYBOARD_LL`) and mouse (`WH_MOUSE_LL`) event 
+To capture the inputs, the extension spins up threads which hook into low-level keyboard (`WH_KEYBOARD_LL`) and mouse (`WH_MOUSE_LL`) event 
 handling to put the captured inputs in the hotkey until the capture has ended, the hooks are then removed again.
 
 To display the hotkey text on the button, each `ImHotkeyData_t` creates a unique ID when it is created, the label of the button will then be set to
@@ -25,3 +25,7 @@ The capture is automatically ended when no key or mouse button is being held dow
 - Capture mouse buttons (left, right, middle, mouse4, mouse5).
 - Capture keyboard, including modifiers (shift, alt, ctrl), independent of keyboard layout
 - Exclude capture of keyboard / mouse / modifiers through flags.
+
+## Todo
+- Add more customization flags for the style / visuals of the widget
+- See if we can swap to `SetWinEventHook` instead of `SetWindowsHook` as it is significantly less invasive
